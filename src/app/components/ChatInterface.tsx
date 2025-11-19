@@ -1,24 +1,34 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
-
+import remarkGfm from "remark-gfm";
 interface Message {
   role: "user" | "assistant";
   content: string;
 }
 
 export default function ChatInterface() {
-  const [messages, setMessages] = useState<Message[]>([
-    { role: "assistant", content: "Hello! How can I help you today?" },
-    { role: "user", content: "Can you explain TypeScript to me?" },
-    {
-      role: "assistant",
-      content:
-        "TypeScript is a strongly typed programming language that builds on JavaScript. It adds optional static typing, which helps catch errors early and improves code quality.",
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const savedMessages = localStorage.getItem("chatMessages");
+    if (savedMessages) {
+      setMessages(JSON.parse(savedMessages));
+    } else {
+      // Default messages if no saved history
+      setMessages([
+        { role: "assistant", content: "Hello! How can I help you today?" },
+      ]);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (messages.length > 0) {
+      localStorage.setItem("chatMessages", JSON.stringify(messages));
+    }
+  }, [messages]);
 
   const handleSubmit = async () => {
     if (input.trim()) {
@@ -47,6 +57,8 @@ export default function ChatInterface() {
             content: data.response,
           },
         ]);
+        // localStorage.setItem("messages", JSON.stringify(messages));
+        console.log(messages);
       } catch (error) {
         console.error("Error calling API:", error);
         setMessages((prev) => [
@@ -61,7 +73,7 @@ export default function ChatInterface() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col">
+    <div className="h-[800px] overflow-auto bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col">
       {/* Header */}
       <div className="w-full bg-slate-800/50 border-b border-slate-700 py-4 px-6">
         <h1 className="text-2xl font-bold text-white text-center">
@@ -90,7 +102,9 @@ export default function ChatInterface() {
                   {msg.role === "user" ? "You" : "Assistant"}
                 </div>
                 <div className="text-sm leading-relaxed whitespace-pre-wrap">
-                  {msg.content}
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {msg.content}
+                  </ReactMarkdown>
                 </div>
               </div>
             </div>
